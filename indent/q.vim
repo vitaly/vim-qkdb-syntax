@@ -13,34 +13,77 @@ let b:did_indent = 1
 setlocal indentexpr=KIndentGet(v:lnum)
 setlocal indentkeys=o,O,*<Return>,<Bs>,!^F,<{>,<}>,<[>,<]>
 
-" [-- count indent-increasing '{[' of k line a:lnum --]
-fun! <SID>KIndentOpen(line)
-    return strlen(substitute(a:line, '[^{[(]\+', '', 'g'))
+fun! SynIDname(lnum, col)
+    return synIDattr(synID(a:lnum, a:col, 1), 'name')
 endfun
 
-" [-- count indent-decreasing ']}' of k line a:lnum --]
-fun! <SID>KIndentClose(line)
-    return strlen(substitute(a:line, '[^}\])]\+', '', 'g'))
+fun! IsInString(lnum, col)
+    return SynIDname(a:lnum, a:col) ==  "kString"
 endfun
 
-" [-- return true if line is a comment --]
-fun! <SID>KStripComment(line)
-    let res = substitute(a:line, '\s/.*$', '', '')
-    let res = substitute(res, '^/.*$', '', '')
-    return res
-endfun
-
-" [-- return -1 if line starts with a closing indent character (e.g. [{( --]
-fun! <SID>KClosing(line)
-    if 0 == match(a:line, '^\s*[}\])]')
-        return -1
-    end
-    return 0
+fun! IsInComment(lnum, col)
+    let name = SynIDname(a:lnum, a:col)
+    return (name ==  "kComment") || (name ==  "kSpecialComment")
 endfun
 
 " [-- return the sum of indents with a forward limit --]
-fun! <SID>KIndentDiff(line)
-    return min([1, <SID>KIndentOpen(a:line) - <SID>KIndentClose(a:line)])
+fun! KIndentDiff(lnum)
+    " starts with a comment
+    if IsInComment(a:lnum, 1)
+        return 0
+    endif
+
+    echom "diff for lnum: " . a:lnum
+    let diffline = getline(a:lnum)
+    echom "diff for: " . diffline
+
+    let last = len(diffline)
+    echom "last: " . last
+
+    " empty line
+    if last < 0
+        return 0
+    endif
+
+    let i = 1
+
+    let res = 0
+
+    " iterate over all line columns
+    while i <= last
+        " string indexes are 0-based, columns are 1-based
+        let c = diffline[i - 1]
+
+        echom c . " [" . i . "] ======= " . res
+        if IsInComment(a:lnum, i)
+            echom "comment"
+            " if we found a comment, we can skip the rest
+            break
+        endif
+
+        " skip strings
+        let isstring = IsInString(a:lnum, i)
+        echom "isstring: " . isstring
+        "echom "IsInString(" . a:lnum . ", " . a:col . ")"
+        if ! isstring
+            " here we are not in a comment or string
+            " need to tally open/closed
+
+            if 0 == match(c, '[[{(]')
+                "echom "open"
+                let res = res + 1
+            elseif 0 == match(c, '[\]})]')
+                "echom "close"
+                let res = res - 1
+            endif
+        endif
+
+        let i = i + 1
+    endwhile
+
+    echom "res: " . res
+
+    return res
 endfun
 
 fun! KIndentGet(lnum)
@@ -50,35 +93,22 @@ fun! KIndentGet(lnum)
         return 0
     endif
 
-    let line = getline(a:lnum)
-
     " Find a non-empty line above the current line.
     let pnum = prevnonblank(a:lnum - 1)
 
-    let pline = getline(pnum)
-    echom "pline: " . pline
+    let pdiff = KIndentDiff(pnum)
 
-    let pline = <SID>KStripComment(pline)
+    let diff = pdiff
 
-    echom "pline w/o comments: " . pline
+    echom "line: " . a:lnum
+    echom "pnum: " . pnum
+    echom "pdiff: " . pdiff
+    echom "diff: " . diff
 
     let pindent = indent(pnum)
-
-    let pclosing = <SID>KClosing(pline)
-
-    let pdiff = <SID>KIndentDiff(pline)
-
-    let closing = <SID>KClosing(line)
-
-    let diff = (closing - pclosing + pdiff)
-
     let res = max([0, pindent + (&sw * diff) ])
 
     return res
-endfun
-
-fun! Foo(lnum)
-    return <SID>KIndentGet(a:lnum)
 endfun
 
 " [-- EOF <runtime>/indent/k.vim --]
