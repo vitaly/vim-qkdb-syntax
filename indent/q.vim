@@ -33,12 +33,12 @@ fun! KIndentDiff(lnum)
         return 0
     endif
 
-    echom "diff for lnum: " . a:lnum
+    "echom "diff for lnum: " . a:lnum
     let diffline = getline(a:lnum)
-    echom "diff for: " . diffline
+    "echom "diff for: " . diffline
 
     let last = len(diffline)
-    echom "last: " . last
+    "echom "last: " . last
 
     " empty line
     if last < 0
@@ -54,16 +54,16 @@ fun! KIndentDiff(lnum)
         " string indexes are 0-based, columns are 1-based
         let c = diffline[i - 1]
 
-        echom c . " [" . i . "] ======= " . res
+        "echom c . " [" . i . "] ======= " . res
         if IsInComment(a:lnum, i)
-            echom "comment"
+            "echom "comment"
             " if we found a comment, we can skip the rest
             break
         endif
 
         " skip strings
         let isstring = IsInString(a:lnum, i)
-        echom "isstring: " . isstring
+        "echom "isstring: " . isstring
         "echom "IsInString(" . a:lnum . ", " . a:col . ")"
         if ! isstring
             " here we are not in a comment or string
@@ -81,7 +81,7 @@ fun! KIndentDiff(lnum)
         let i = i + 1
     endwhile
 
-    echom "res: " . res
+    "echom "res: " . res
 
     return res
 endfun
@@ -100,10 +100,10 @@ fun! KIndentGet(lnum)
 
     let diff = pdiff
 
-    echom "line: " . a:lnum
-    echom "pnum: " . pnum
-    echom "pdiff: " . pdiff
-    echom "diff: " . diff
+    "echom "line: " . a:lnum
+    "echom "pnum: " . pnum
+    "echom "pdiff: " . pdiff
+    "echom "diff: " . diff
 
     let pindent = indent(pnum)
     let res = max([0, pindent + (&sw * diff) ])
